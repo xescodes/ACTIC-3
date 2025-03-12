@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Aleatori ACTIC</title>
+    <title>Dades del Full de Càlcul</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,173 +15,69 @@
             text-align: center;
             color: #333;
         }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #fff;
         }
-        .question {
-            margin-bottom: 20px;
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
         }
-        .options label {
-            display: block;
-            margin: 5px 0;
+        th {
+            background-color: #f2f2f2;
         }
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #e9f7ef;
-            border-left: 5px solid #28a745;
-        }
-        .error {
-            background-color: #f8d7da;
-            border-left: 5px solid #dc3545;
-        }
-        #progress {
-            margin-bottom: 20px;
+        #data {
             text-align: center;
-            color: #555;
         }
     </style>
 </head>
 <body>
-    <h1>Test Aleatori ACTIC</h1>
-    <div class="container">
-        <div id="progress"></div>
-        <div id="quiz"></div>
-        <button id="submit">Enviar Test</button>
-        <div id="results" style="display:none;"></div>
-    </div>
+    <h1>Dades del Full de Càlcul</h1>
+    <div id="data">Carregant dades...</div>
 
     <script>
-        // ID del document de Google Sheets
-        const SHEET_ID = "1OHGZn1a5yr6AmPPLiy_vW30whbejsKyWTFgSSxRrzgY";
-        const API_KEY = "CLAU_API"; // Reemplaça amb la teva clau API
+        // Configuració de l'API
+        const sheetId = '1OHGZn1a5yr6AmPPLiy_vW30whbejsKyWTFgSSxRrzgY';
+        const apiKey = 'AIzaSyA6Nj2FGa-Vsom8HRPZxNlQQ3rE7PSLqPQ';
 
         // URL per accedir al contingut del full de càlcul
-        const SHEET_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:D?key=${API_KEY}`;
+        const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:Z100?key=${apiKey}`;
 
-        let questions = [];
-        let currentQuestionIndex = 0;
-        let score = 0;
-        let userAnswers = [];
-
-        async function loadQuestions() {
-            try {
-                const response = await fetch(SHEET_URL);
+        // Funció per carregar les dades del full de càlcul
+        fetch(sheetUrl)
+            .then(response => {
                 if (!response.ok) {
                     throw new Error(`Error HTTP: ${response.status}`);
                 }
-                const data = await response.json();
-                if (!data.values || data.values.length === 0) {
+                return response.json();
+            })
+            .then(data => {
+                const rows = data.values;
+                if (!rows || rows.length === 0) {
                     throw new Error("No s'han trobat dades en el full de càlcul.");
                 }
 
-                const rows = data.values;
-                rows.forEach((row, index) => {
-                    if (index === 0) return; // Ignora la primera fila (capçaleres)
-                    questions.push({
-                        question: row[0],
-                        options: row[1].split(","),
-                        answer: row[2],
-                        explanation: row[3]
+                // Generar una taula HTML amb les dades
+                let html = '<table border="1">';
+                rows.forEach((row, rowIndex) => {
+                    html += '<tr>';
+                    row.forEach((cell, cellIndex) => {
+                        html += rowIndex === 0 ? `<th>${cell}</th>` : `<td>${cell}</td>`;
                     });
+                    html += '</tr>';
                 });
+                html += '</table>';
 
-                console.log("Preguntes carregades:", questions);
-                loadQuestion();
-            } catch (error) {
-                console.error("Error en carregar les preguntes:", error.message);
-                alert("No s'han pogut carregar les preguntes. Comprova la connexió i la configuració de l'API.");
-            }
-        }
-
-        function loadQuestion() {
-            const q = questions[currentQuestionIndex];
-            const quizDiv = document.getElementById("quiz");
-            quizDiv.innerHTML = `
-                <div class="question">
-                    <strong>${currentQuestionIndex + 1}. ${q.question}</strong>
-                    <div class="options">
-                        ${q.options.map((option, index) => `
-                            <label>
-                                <input type="radio" name="question${currentQuestionIndex}" value="${option}">
-                                ${option}
-                            </label>
-                        `).join("")}
-                    </div>
-                </div>
-            `;
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const progressDiv = document.getElementById("progress");
-            progressDiv.textContent = `Pregunta ${currentQuestionIndex + 1} de ${questions.length}`;
-        }
-
-        function showResults() {
-            const resultsDiv = document.getElementById("results");
-            resultsDiv.innerHTML = "";
-            resultsDiv.style.display = "block";
-
-            questions.forEach((q, index) => {
-                const userAnswer = userAnswers[index];
-                const isCorrect = userAnswer === q.answer;
-                const resultClass = isCorrect ? "result" : "error";
-                resultsDiv.innerHTML += `
-                    <div class="${resultClass}">
-                        <strong>${index + 1}. ${q.question}</strong><br>
-                        <em>Resposta correcta:</em> ${q.answer}<br>
-                        <em>Resposta donada:</em> ${userAnswer || "No has respost"}<br>
-                        <em>Explicació:</em> ${q.explanation}
-                    </div>
-                `;
+                // Mostrar la taula a la pàgina
+                document.getElementById('data').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('data').innerHTML = `<p style="color: red;">Error en carregar les dades: ${error.message}</p>`;
             });
-
-            resultsDiv.innerHTML += `<p>Puntuació final: ${score}/${questions.length}</p>`;
-        }
-
-        document.getElementById("submit").addEventListener("click", () => {
-            const selectedOption = document.querySelector(`input[name="question${currentQuestionIndex}"]:checked`);
-            if (!selectedOption && currentQuestionIndex < questions.length - 1) {
-                alert("Si us plau, selecciona una resposta.");
-                return;
-            }
-
-            if (selectedOption) {
-                userAnswers[currentQuestionIndex] = selectedOption.value;
-                if (selectedOption.value === questions[currentQuestionIndex].answer) {
-                    score++;
-                }
-            }
-
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                loadQuestion();
-            } else {
-                showResults();
-            }
-        });
-
-        // Inicialitzar el test
-        loadQuestions();
     </script>
 </body>
 </html>
